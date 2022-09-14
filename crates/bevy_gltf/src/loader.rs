@@ -1,5 +1,4 @@
 use anyhow::Result;
-use bevy_animation::AnimationPlayer;
 use bevy_asset::{
     AssetIoError, AssetLoader, AssetPath, BoxedFuture, Handle, LoadContext, LoadedAsset,
 };
@@ -375,7 +374,7 @@ async fn load_gltf<'a, 'b>(
             .insert_bundle(SpatialBundle::VISIBLE_IDENTITY)
             .with_children(|parent| {
                 for node in scene.nodes() {
-                    match load_node(
+                    let result = load_node(
                         &node,
                         parent,
                         load_context,
@@ -384,12 +383,10 @@ async fn load_gltf<'a, 'b>(
                         &mut entity_to_skin_index_map,
                         &mut active_camera_found,
                         Some(&gltf),
-                    ) {
-                        Err(e) => {
-                            err = Some(Err(e) as Result<(), _>);
-                            return;
-                        }
-                        Ok(e) => (),
+                    );
+                    if result.is_err() {
+                        err = Some(result);
+                        return;
                     }
                 }
             });
@@ -433,7 +430,7 @@ async fn load_gltf<'a, 'b>(
     // };
 
     #[cfg(feature = "bevy_animation")]
-    let (animations, named_animations, animation_roots) = {
+    let (animations, named_animations) = {
         let mut animations = vec![];
         let mut named_animations = HashMap::default();
         for animation in gltf.animations() {
@@ -504,21 +501,8 @@ async fn load_gltf<'a, 'b>(
             }
             animations.push(handle);
         }
-        (animations, named_animations, ())
+        (animations, named_animations)
     };
-
-    // #[cfg(feature = "bevy_animation")]
-    // {
-    //     // for each node root in a scene, check if it's the root of an animation
-    //     // if it is, add the AnimationPlayer component
-    //     for node in gltf.scenes().flat_map(|s| s.nodes()) {
-    //         if animation_roots.contains(&node.index()) {
-    //             world
-    //                 .entity_mut(*node_index_to_entity_map.get(&node.index()).unwrap())
-    //                 .insert(bevy_animation::AnimationPlayer::default());
-    //         }
-    //     }
-    // }
 
     load_context.set_default_asset(LoadedAsset::new(Gltf {
         default_scene: gltf
@@ -557,20 +541,20 @@ fn node_name(node: &Node) -> Name {
     Name::new(name)
 }
 
-#[cfg(feature = "bevy_animation")]
-fn paths_recur(
-    node: Node,
-    current_path: &[Name],
-    paths: &mut HashMap<usize, (usize, Vec<Name>)>,
-    root_index: usize,
-) {
-    let mut path = current_path.to_owned();
-    path.push(node_name(&node));
-    for child in node.children() {
-        paths_recur(child, &path, paths, root_index);
-    }
-    paths.insert(node.index(), (root_index, path));
-}
+// #[cfg(feature = "bevy_animation")]
+// fn paths_recur(
+//     node: Node,
+//     current_path: &[Name],
+//     paths: &mut HashMap<usize, (usize, Vec<Name>)>,
+//     root_index: usize,
+// ) {
+//     let mut path = current_path.to_owned();
+//     path.push(node_name(&node));
+//     for child in node.children() {
+//         paths_recur(child, &path, paths, root_index);
+//     }
+//     paths.insert(node.index(), (root_index, path));
+// }
 
 /// Loads a glTF texture as a bevy [`Image`] and returns it together with its label.
 async fn load_texture<'a>(

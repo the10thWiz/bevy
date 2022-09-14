@@ -1,11 +1,4 @@
-use bevy_ecs::{
-    component::Component,
-    entity::Entity,
-    query::QueryEntityError,
-    reflect::ReflectComponent,
-    system::{Query, SystemParam},
-};
-use bevy_hierarchy::Children;
+use bevy_ecs::{component::Component, reflect::ReflectComponent};
 use bevy_reflect::std_traits::ReflectDefault;
 use bevy_reflect::Reflect;
 use bevy_utils::AHasher;

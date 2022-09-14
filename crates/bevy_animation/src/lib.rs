@@ -2,21 +2,16 @@
 
 #![warn(missing_docs)]
 
-use std::ops::Deref;
-
 use bevy_app::{App, CoreStage, Plugin};
 use bevy_asset::{AddAsset, Assets, Handle};
-use bevy_core::{EntityPath, Name, NameLookup};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
     prelude::Component,
-    query::QueryEntityError,
     reflect::ReflectComponent,
     schedule::ParallelSystemDescriptorCoercion,
-    system::{Query, Res, SystemParam},
+    system::{Query, Res},
 };
-use bevy_hierarchy::Children;
 use bevy_math::{Quat, Vec3};
 use bevy_reflect::{Reflect, TypeUuid};
 use bevy_time::Time;
@@ -170,10 +165,10 @@ impl AnimationPlayer {
 pub fn animation_player(
     time: Res<Time>,
     animations: Res<Assets<AnimationClip>>,
-    mut animation_players: Query<(Entity, &mut AnimationPlayer)>,
+    mut animation_players: Query<&mut AnimationPlayer>,
     mut transforms: Query<&mut Transform>,
 ) {
-    for (entity, mut player) in &mut animation_players {
+    for mut player in &mut animation_players {
         if let Some(animation_clip) = animations.get(&player.animation_clip) {
             // Continue if paused unless the `AnimationPlayer` was changed
             // This allow the animation to still be updated if the player.elapsed field was manually updated in pause
