@@ -55,14 +55,14 @@ pub struct VariableCurve {
 #[derive(Clone, TypeUuid, Debug, Default)]
 #[uuid = "d81b7179-0448-4eb0-89fe-c067222725bf"]
 pub struct AnimationClip {
-    curves: HashMap<EntityPath, Vec<VariableCurve>>,
+    curves: HashMap<Entity, Vec<VariableCurve>>,
     duration: f32,
 }
 
 impl AnimationClip {
     #[inline]
     /// Hashmap of the [`VariableCurve`]s per [`EntityPath`].
-    pub fn curves(&self) -> &HashMap<EntityPath, Vec<VariableCurve>> {
+    pub fn curves(&self) -> &HashMap<Entity, Vec<VariableCurve>> {
         &self.curves
     }
 
@@ -73,7 +73,7 @@ impl AnimationClip {
     }
 
     /// Add a [`VariableCurve`] to an [`EntityPath`].
-    pub fn add_curve_to_path(&mut self, path: EntityPath, curve: VariableCurve) {
+    pub fn add_curve_to_path(&mut self, path: Entity, curve: VariableCurve) {
         // Update the duration of the animation by this curve duration if it's longer
         self.duration = self
             .duration
@@ -172,7 +172,6 @@ pub fn animation_player(
     animations: Res<Assets<AnimationClip>>,
     mut animation_players: Query<(Entity, &mut AnimationPlayer)>,
     mut transforms: Query<&mut Transform>,
-    lookup: NameLookup,
 ) {
     for (entity, mut player) in &mut animation_players {
         if let Some(animation_clip) = animations.get(&player.animation_clip) {
@@ -193,13 +192,7 @@ pub fn animation_player(
             }
             for (path, curves) in &animation_clip.curves {
                 // PERF: finding the target entity can be optimised
-                let current_entity = match lookup.lookup(entity, path) {
-                    Ok(e) => e,
-                    Err(e) => {
-                        warn!("Entity for path {path:?} was not found");
-                        continue;
-                    }
-                };
+                let current_entity = *path;
                 if let Ok(mut transform) = transforms.get_mut(current_entity) {
                     for curve in curves {
                         // Some curves have only one keyframe used to set a transform
