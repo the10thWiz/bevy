@@ -27,18 +27,42 @@ fn setup(
         ..default()
     });
 
-    // The animation API uses the `Name` component to target entities
-    let planet = Name::new("planet");
-    let orbit_controller = Name::new("orbit_controller");
-    let satellite = Name::new("satellite");
+    // Spawn satellite
+    let satellite = commands
+        .spawn_bundle(PbrBundle {
+            transform: Transform::from_xyz(1.5, 0.0, 0.0),
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
+            material: materials.add(Color::rgb(0.3, 0.9, 0.3).into()),
+            ..default()
+        })
+        .insert(Name::new("satellite"))
+        // Save entity ID
+        .id();
+    // An orbit controller with no visible parts, purely for animation
+    let orbit_controller = commands
+        .spawn_bundle(SpatialBundle::VISIBLE_IDENTITY)
+        .insert(Name::new("orbit_controller"))
+        // parent the satellite to orbit_controller
+        .insert_children(0, &[satellite])
+        // Save entity ID
+        .id();
+    // Spawn central planet
+    let planet = commands
+        .spawn_bundle(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Icosphere::default())),
+            material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+            ..default()
+        })
+        .insert(Name::new("planet"))
+        // parent the orbit_controller to planets
+        .insert_children(0, &[orbit_controller])
+        .id();
 
     // Creating the animation
     let mut animation = AnimationClip::default();
     // A curve can modify a single part of a transform, here the translation
     animation.add_curve_to_path(
-        EntityPath {
-            parts: vec![planet.clone()],
-        },
+        planet,
         VariableCurve {
             keyframe_timestamps: vec![0.0, 1.0, 2.0, 3.0, 4.0],
             keyframes: Keyframes::Translation(vec![
@@ -56,9 +80,7 @@ fn setup(
     // To find the entity to modify, the hierarchy  will be traversed looking for
     // an entity with the right name at each level
     animation.add_curve_to_path(
-        EntityPath {
-            parts: vec![planet.clone(), orbit_controller.clone()],
-        },
+        orbit_controller,
         VariableCurve {
             keyframe_timestamps: vec![0.0, 1.0, 2.0, 3.0, 4.0],
             keyframes: Keyframes::Rotation(vec![
@@ -74,9 +96,7 @@ fn setup(
     // until all other curves are finished. In that case, another animation should
     // be created for each part that would have a different duration / period
     animation.add_curve_to_path(
-        EntityPath {
-            parts: vec![planet.clone(), orbit_controller.clone(), satellite.clone()],
-        },
+        satellite,
         VariableCurve {
             keyframe_timestamps: vec![0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
             keyframes: Keyframes::Scale(vec![
@@ -94,9 +114,7 @@ fn setup(
     );
     // There can be more than one curve targeting the same entity path
     animation.add_curve_to_path(
-        EntityPath {
-            parts: vec![planet.clone(), orbit_controller.clone(), satellite.clone()],
-        },
+        satellite,
         VariableCurve {
             keyframe_timestamps: vec![0.0, 1.0, 2.0, 3.0, 4.0],
             keyframes: Keyframes::Rotation(vec![
@@ -113,31 +131,6 @@ fn setup(
     let mut player = AnimationPlayer::default();
     player.play(animations.add(animation)).repeat();
 
-    // Create the scene that will be animated
-    // First entity is the planet
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Icosphere::default())),
-            material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-            ..default()
-        })
-        // Add the Name component, and the animation player
-        .insert_bundle((planet, player))
-        .with_children(|p| {
-            // This entity is just used for animation, but doesn't display anything
-            p.spawn_bundle(SpatialBundle::VISIBLE_IDENTITY)
-                // Add the Name component
-                .insert(orbit_controller)
-                .with_children(|p| {
-                    // The satellite, placed at a distance of the planet
-                    p.spawn_bundle(PbrBundle {
-                        transform: Transform::from_xyz(1.5, 0.0, 0.0),
-                        mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
-                        material: materials.add(Color::rgb(0.3, 0.9, 0.3).into()),
-                        ..default()
-                    })
-                    // Add the Name component
-                    .insert(satellite);
-                });
-        });
+    // The animation player needs to be added to an entity (although it doesn't matter which)
+    commands.spawn().insert(player);
 }
