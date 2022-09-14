@@ -157,4 +157,3 @@ impl Deref for Name {
         self.name.as_ref()
     }
 }
-

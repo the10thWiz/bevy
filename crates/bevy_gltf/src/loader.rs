@@ -137,7 +137,6 @@ async fn load_gltf<'a, 'b>(
         }
     }
 
-
     let mut meshes = vec![];
     let mut named_meshes = HashMap::default();
     for mesh in gltf.meshes() {
@@ -544,7 +543,10 @@ async fn load_gltf<'a, 'b>(
 }
 
 fn is_animation_root(gltf: &gltf::Gltf, node: &gltf::Node) -> bool {
-    gltf.animations().flat_map(|a| a.channels()).any(|c| node.children().any(|n| c.target().node().index() == n.index()))
+    gltf.animations().flat_map(|a| a.channels()).any(|c| {
+        node.children()
+            .any(|n| c.target().node().index() == n.index())
+    })
 }
 
 fn node_name(node: &Node) -> Name {
